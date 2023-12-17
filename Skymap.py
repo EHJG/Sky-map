@@ -12,22 +12,12 @@ t = ts.utc(2023, 11, 11)
 planets = load('de421.bsp')
 tierra = planets['earth']
 degrees = 0
-az_degrees=0
-alt_degrees=90
-with load.open(hipparcos.URL) as f: 
-    df = hipparcos.load_dataframe(f)
+field_of_view_degrees = 180.0
+limiting_magnitude = 6.0
+dso_limit_magnitude = 8.0
 
-bright_stars = Star.from_dataframe(df)
-    
-observador = tierra + wgs84.latlon(9.68 * N, 63.239980 *W, elevation_m=4)
-astro = observador.at(t).observe(bright_stars)
-app = astro.apparent()
-
-
-
-# DSO's de stellarium
-
-with open(r'C:\Users\Enrique\Documents\Carpeta de trabajo\catalog.txt') as f:
+# Cargar DSO's de stellarium
+with open('C:\Carpeta de trabajo\catalog.txt') as f:
     dsodata = dsos.load_dataframe(f)
 
 '''
@@ -36,32 +26,46 @@ with open(r'C:\Users\Enrique\Documents\Carpeta de trabajo\catalog.txt') as f:
 starnames = rw.leer_archivo_json(r'C:\Users\Enrique\Documents\Carpeta de trabajo\IAU-CSN.json')
 '''
 
-#Funcion para imprimir direccion de estrellas especificas
+# Cargar Catalogo Hipparcos
+with load.open(hipparcos.URL) as f: 
+    df = hipparcos.load_dataframe(f)
 
-def imprimir_direccion (alt,az,distance):
-    print(alt.dstr())
-    print(az.dstr())
-    print(distance)
+bright_stars = Star.from_dataframe(df)
 
+# Datos para imprimir direccion de estrellas especificas/disponibles
+observer = tierra + wgs84.latlon(9.68 * N, 63.239980 *W, elevation_m=4)
+astro = observer.at(t).observe(bright_stars)
+app = astro.apparent()
 
-#Mostrar estrellas
+# Constantes para mostrar estrellas
 site = wgs84.latlon(9.68 * N, 63.239980 *W, elevation_m=4).at(t)
-position = site.from_altaz(alt_degrees, az_degrees)
+position = site.from_altaz(alt_degrees=90, az_degrees=0)
 ra, dec, distance = site.radec()
 center_object = Star(ra=ra, dec=dec)
 alt, az, distance = app.altaz()
-punto = tierra.at(t).observe(bright_stars)
-ra2, dec2, distance2 = punto.radec()
 
+# Posicion y limites de vision en el mapeado
+center = tierra.at(t).observe(center_object)
+projection = build_stereographic_projection(center)
+
+#Funcion para imprimir direccion de estrellas especificas
+def imprimir_direccion ():
+    punto = observer.at(t).observe(bright_stars)
+    alt, az, distanc = punto.apparent().altaz()
+    print(alt.dstr())
+    print(az.dstr())
+    print(distanc)
+
+#Funcion para filtrar estrellas segun su magnitud
+def imprimir_filtrado(df):
+    df = df[df['magnitude'] <= 3.5]
+    print('Luego de filtrar en ese rango de magnitud, se encuentran {} estrellas'.format(len(df)))
+    ra, dec, distance = astro.radec()
+    print('Hay {} ascensiones'.format(len(ra.hours)))
+    print('y {} declinaciones'.format(len(dec.degrees)))
+
+#Dibujando posiciones de las estrellas en el diagrama
 def crear_mapeado ():
-
-    center = tierra.at(t).observe(center_object)
-    projection = build_stereographic_projection(center)
-    field_of_view_degrees = 180.0
-    limiting_magnitude = 6.0
-    dso_limit_magnitude = 8.0
-
-    #Dibujando posiciones de las estrellas en el diagrama
 
     star_positions = tierra.at(t).observe(Star.from_dataframe(df))
     df['x'], df['y'] = projection(star_positions)
@@ -92,12 +96,10 @@ def crear_mapeado ():
                             colors='#00f2', linewidths=1, linestyle='dashed', zorder=-1, alpha=0.5))
 
     #Coloco la vision de 180° desde una perspectiva de primera persona
-
     angle = np.pi - field_of_view_degrees / 360.0 * np.pi
     limit = np.sin(angle) / (1.0 - np.cos(angle))
 
     #Empiezo con el diagrama de dispersion
-
     ax.scatter(df['x'][bright_stars2], df['y'][bright_stars2],
     s=marker_size, color='black', marker='.', linewidths=0, 
     zorder=2)
@@ -105,7 +107,7 @@ def crear_mapeado ():
     ax.scatter(dsodata['x'][bright_dsos], dsodata['y'][bright_dsos],
             s=dso_size, color='red', marker='.')
 
-    #Cargar nombres de estrellas en el mapa (No he consegui aun un catalogo que funcione con las )
+    #Cargar nombres de estrellas en el mapa (No he consegui aun un catalogo que funcione con los nombres de estrellas)
     '''
     for i, s in df[bright_stars2].iterrows():
         if -limit < s['x'] < limit and -limit < s['y'] < limit:
@@ -122,7 +124,6 @@ def crear_mapeado ():
                     ha='left', va='top', fontsize=9, weight='bold', zorder=1).set_alpha(0.5)
 
     #Marcamos los limites del grafico
-
     ax.set_xlim(-limit, limit)
     ax.set_ylim(-limit, limit)
     ax.xaxis.set_visible(True)
@@ -134,3 +135,6 @@ def crear_mapeado ():
 
     plt.show()
 
+imprimir_direccion()
+imprimir_filtrado(df)
+crear_mapeado()
