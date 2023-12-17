@@ -20,52 +20,51 @@ dso_limit_magnitude = 8.0
 with open('C:\Carpeta de trabajo\catalog.txt') as f:
     dsodata = dsos.load_dataframe(f)
 
-'''
-# Datos de estrellas de IAU
-
-starnames = rw.leer_archivo_json(r'C:\Users\Enrique\Documents\Carpeta de trabajo\IAU-CSN.json')
-'''
-
 # Cargar Catalogo Hipparcos
 with load.open(hipparcos.URL) as f: 
     df = hipparcos.load_dataframe(f)
-
 bright_stars = Star.from_dataframe(df)
 
 # Datos para imprimir direccion de estrellas especificas/disponibles
 observer = tierra + wgs84.latlon(9.68 * N, 63.239980 *W, elevation_m=4)
-astro = observer.at(t).observe(bright_stars)
-app = astro.apparent()
-
-# Constantes para mostrar estrellas
-site = wgs84.latlon(9.68 * N, 63.239980 *W, elevation_m=4).at(t)
-position = site.from_altaz(alt_degrees=90, az_degrees=0)
-ra, dec, distance = site.radec()
-center_object = Star(ra=ra, dec=dec)
-alt, az, distance = app.altaz()
-
-# Posicion y limites de vision en el mapeado
-center = tierra.at(t).observe(center_object)
-projection = build_stereographic_projection(center)
-
-#Funcion para imprimir direccion de estrellas especificas
-def imprimir_direccion ():
-    punto = observer.at(t).observe(bright_stars)
-    alt, az, distanc = punto.apparent().altaz()
-    print(alt.dstr())
-    print(az.dstr())
-    print(distanc)
 
 #Funcion para filtrar estrellas segun su magnitud
-def imprimir_filtrado(df):
-    df = df[df['magnitude'] <= 3.5]
+def imprimir_filtrado(df, magnitud):
+    df = df[df['magnitude'] <= magnitud]
+    bright_stars = Star.from_dataframe(df)
+    astro = observer.at(t).observe(bright_stars)
     print('Luego de filtrar en ese rango de magnitud, se encuentran {} estrellas'.format(len(df)))
     ra, dec, distance = astro.radec()
     print('Hay {} ascensiones'.format(len(ra.hours)))
     print('y {} declinaciones'.format(len(dec.degrees)))
 
+#Funcion para imprimir direccion y distancia de estrellas especificas
+def imprimir_direccion (df, magnitud, lok=0):
+    if lok == 0:
+        df = df[df['magnitude'] <= magnitud]
+        bright_stars = Star.from_dataframe(df)
+        punto = observer.at(t).observe(bright_stars)
+        alt, az, distanc = punto.apparent().altaz()
+        print(alt.dstr())
+        print(az.dstr())
+        print(distanc)
+    else:
+        bright_stars = Star.from_dataframe(df.loc[lok])
+        punto = observer.at(t).observe(bright_stars)
+        alt, az, distanc = punto.apparent().altaz()
+        print(alt.dstr())
+        print(az.dstr())
+        print(distanc)
+
 #Dibujando posiciones de las estrellas en el diagrama
-def crear_mapeado ():
+def crear_mapeado (latitud, direccion_1, longitud, direccion_2, elevacion):
+
+    # Constantes para mostrar estrellas
+    site = wgs84.latlon(latitud * direccion_1, longitud *direccion_2, elevacion).at(t)
+    ra, dec, distance = site.radec()
+    center_object = Star(ra=ra, dec=dec)
+    center = tierra.at(t).observe(center_object)
+    projection = build_stereographic_projection(center)
 
     star_positions = tierra.at(t).observe(Star.from_dataframe(df))
     df['x'], df['y'] = projection(star_positions)
@@ -134,7 +133,3 @@ def crear_mapeado ():
     fig.savefig('bright_stars.png')
 
     plt.show()
-
-imprimir_direccion()
-imprimir_filtrado(df)
-crear_mapeado()
