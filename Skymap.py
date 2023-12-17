@@ -17,8 +17,12 @@ limiting_magnitude = 6.0
 dso_limit_magnitude = 8.0
 
 # Cargar DSO's de stellarium
-with open('C:\Carpeta de trabajo\catalog.txt') as f:
+with open(u'C:\\Carpeta de trabajo\\catalog.txt') as f:
     dsodata = dsos.load_dataframe(f)
+
+# Cargar starnames (No he conseguido la forma de leer el Json correctamente para que lo muestre en pantalla junto al mapeado aun)
+# with open('C:\Carpeta de trabajo\IAU-CSN.json') as f: 
+# starnames = dsos.star_dataframe(f)
 
 # Cargar Catalogo Hipparcos
 with load.open(hipparcos.URL) as f: 
